@@ -1,45 +1,55 @@
-use std::env;
+// use std::env;
 
 fn main() {
-    // The script doesn't depend on our code
-    println!("cargo:rerun-if-changed=build.rs");
+    // NOTE(paris): When building with Bazel we have custom configuration for building Objective-C
+    // (and any native code) which does not work with cc::Build. Though there may be many smaller 
+    // reasons they are not compatible (i.e. cc::Build using different flags than our Bazel rules 
+    // do), the biggest reason is that it looks at the AR env var to run an archiver, and on OSX
+    // it expects to use `llvm-ar`. But in our libtool-xcwrapper we use llvm-libtool-darwin. So to
+    // avoid these issues, we just manually compile src/try_catch.m ourselves. 
+    // 
+    // Note though that we have manually copied it into our repo, so if you update the 
+    // obj2-exception-helper crate dependency, you may need to manually copy it into our repo.
 
-    if std::env::var("DOCS_RS").is_ok() {
-        // docs.rs doesn't have clang, so skip building this. The
-        // documentation will still work since it doesn't need to link.
-        //
-        // This is independent of the `docsrs` cfg; we never want to try
-        // invoking clang on docs.rs, whether we're the crate being
-        // documented currently, or a dependency of another crate.
-        return;
-    }
+    // // The script doesn't depend on our code
+    // println!("cargo:rerun-if-changed=build.rs");
 
-    // Note: Intentionally compile without ARC, we want to handle memory
-    // management ourselves.
-    let mut builder = cc::Build::new();
-    builder.flag("-xobjective-c");
-    builder.flag("-fobjc-exceptions");
-    builder.file("src/try_catch.m");
+    // if std::env::var("DOCS_RS").is_ok() {
+    //     // docs.rs doesn't have clang, so skip building this. The
+    //     // documentation will still work since it doesn't need to link.
+    //     //
+    //     // This is independent of the `docsrs` cfg; we never want to try
+    //     // invoking clang on docs.rs, whether we're the crate being
+    //     // documented currently, or a dependency of another crate.
+    //     return;
+    // }
 
-    // Set Objective-C runtime. We assume the compiler is Clang, if it isn't,
-    // this is probably going to fail anyways, since we're using newer
-    // runtimes than GCC supports.
-    //
-    // TODO: ObjFW via `-fobjc-runtime=objfw-VERSION`. Clang defaults to 0.8
-    if env::var_os("CARGO_FEATURE_GNUSTEP_2_1").is_some() {
-        builder.flag("-fobjc-runtime=gnustep-2.1");
-    } else if env::var_os("CARGO_FEATURE_GNUSTEP_2_0").is_some() {
-        builder.flag("-fobjc-runtime=gnustep-2.0");
-    } else if env::var_os("CARGO_FEATURE_GNUSTEP_1_9").is_some() {
-        builder.flag("-fobjc-runtime=gnustep-1.9");
-    } else if env::var_os("CARGO_FEATURE_GNUSTEP_1_8").is_some() {
-        builder.flag("-fobjc-runtime=gnustep-1.8");
-    } else if env::var_os("CARGO_FEATURE_GNUSTEP_1_7").is_some() {
-        builder.flag("-fobjc-runtime=gnustep-1.7");
-    } else {
-        // Let the compiler choose a sensible default
-    };
+    // // Note: Intentionally compile without ARC, we want to handle memory
+    // // management ourselves.
+    // let mut builder = cc::Build::new();
+    // builder.flag("-xobjective-c");
+    // builder.flag("-fobjc-exceptions");
+    // builder.file("src/try_catch.m");
 
-    println!("cargo:rerun-if-changed=src/try_catch.m");
-    builder.compile("libobjc2_exception_helper_0_1.a");
+    // // Set Objective-C runtime. We assume the compiler is Clang, if it isn't,
+    // // this is probably going to fail anyways, since we're using newer
+    // // runtimes than GCC supports.
+    // //
+    // // TODO: ObjFW via `-fobjc-runtime=objfw-VERSION`. Clang defaults to 0.8
+    // if env::var_os("CARGO_FEATURE_GNUSTEP_2_1").is_some() {
+    //     builder.flag("-fobjc-runtime=gnustep-2.1");
+    // } else if env::var_os("CARGO_FEATURE_GNUSTEP_2_0").is_some() {
+    //     builder.flag("-fobjc-runtime=gnustep-2.0");
+    // } else if env::var_os("CARGO_FEATURE_GNUSTEP_1_9").is_some() {
+    //     builder.flag("-fobjc-runtime=gnustep-1.9");
+    // } else if env::var_os("CARGO_FEATURE_GNUSTEP_1_8").is_some() {
+    //     builder.flag("-fobjc-runtime=gnustep-1.8");
+    // } else if env::var_os("CARGO_FEATURE_GNUSTEP_1_7").is_some() {
+    //     builder.flag("-fobjc-runtime=gnustep-1.7");
+    // } else {
+    //     // Let the compiler choose a sensible default
+    // };
+
+    // println!("cargo:rerun-if-changed=src/try_catch.m");
+    // builder.compile("libobjc2_exception_helper_0_1.a");
 }
